@@ -6,6 +6,8 @@ load_dotenv()
 client = OpenAI()
 
 # 假設您已有一個助手的 ID
+API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("EXISTING_ASSISTANT_ID")
 EXISTING_ASSISTANT_ID = "your_existing_assistant_id"
 
 # Step 3. 創建一個對話 Thread
