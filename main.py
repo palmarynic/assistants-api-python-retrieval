@@ -1,14 +1,15 @@
 from dotenv import load_dotenv
+import os
 from openai import OpenAI
 
-# Step 1. 加載環境變量
+# Step 1. 加載環境變數
 load_dotenv()
-client = OpenAI()
+
+# 顯式提供 API Key
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 假設您已有一個助手的 ID
-API_KEY = os.getenv("OPENAI_API_KEY")
-ASSISTANT_ID = os.getenv("EXISTING_ASSISTANT_ID")
-
+EXISTING_ASSISTANT_ID = os.getenv("EXISTING_ASSISTANT_ID")
 
 # Step 3. 創建一個對話 Thread
 thread = client.beta.threads.create()
@@ -24,7 +25,7 @@ print(message)
 # Step 5. 執行已存在的助手
 run = client.beta.threads.runs.create(
     thread_id=thread.id,  # 使用創建的 thread_id
-    assistant_id=ASSISTANT_ID  # 使用已存在的助手 ID
+    assistant_id=EXISTING_ASSISTANT_ID  # 使用已存在的助手 ID
 )
 print(run)
 
@@ -34,17 +35,3 @@ run_result = client.beta.threads.runs.retrieve(
     run_id=run.id  # 使用步驟 5 的 run_id
 )
 print(run_result)
-
-# Step 7. 檢查對話訊息
-thread_messages = client.beta.threads.messages.list(thread.id)
-print(thread_messages.data[1])  # 查看第二條訊息
-for message in thread_messages.data:
-    for content in message.content:
-        print(content.text.value)
-
-# 如果需要更新助手工具
-assistant = client.beta.assistants.update(
-    assistant_id=ASSISTANT_ID,  # 使用已存在的助手 ID
-    tools=[{"type": "retrieval"}, {"type": "code_interpreter"}],  # 添加新的工具
-)
-print(assistant)
