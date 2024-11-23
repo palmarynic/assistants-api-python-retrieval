@@ -1,22 +1,56 @@
 import os
+import json
 from openai import OpenAI
 
-# 獲取環境變數
+# 初始化 OpenAI 客戶端
 API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("EXISTING_ASSISTANT_ID")
 
 if not API_KEY or not ASSISTANT_ID:
     raise ValueError("Missing required environment variables: OPENAI_API_KEY or EXISTING_ASSISTANT_ID")
 
-# 初始化 OpenAI 客戶端
 client = OpenAI(api_key=API_KEY)
 
-# 主函數入口，作為 Vercel 無伺服器函數
 def handler(event, context):
+    """
+    Vercel 無伺服器函數的入口，實現 OpenAI 助手功能。
+    """
     try:
-        # 測試問題
-        question = event.get("question", "How long will it take us to be profitable?")
-        
+        # 從請求中解析問題
+        body = event.get("body", {})
+        if isinstance(body, str):  # 如果是 JSON 字符串，轉換為字典
+            body = json.loads(body)
+
+        question = body.get("question")
+        if not question:
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"error": "Missing 'question' in request body"})
+            }
+
+        # 執行助手邏輯
+        response = ask_openai_assistant(question)
+
+        # 返回成功響應
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps(response)
+        }
+    except Exception as e:
+        # 返回錯誤響應
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": str(e)})
+        }
+
+def ask_openai_assistant(question):
+    """
+    與 OpenAI 助手交互並返回結果。
+    """
+    try:
         # 創建對話 Thread
         thread = client.beta.threads.create()
 
@@ -39,8 +73,9 @@ def handler(event, context):
             run_id=run.id,
         )
 
-        # 返回助手的回答
+        # 提取助手的回答
         assistant_reply = run_result.get("messages")[-1]["content"]
-        return {"statusCode": 200, "body": assistant_reply}
+
+        return {"question": question, "answer": assistant_reply}
     except Exception as e:
-        return {"statusCode": 500, "body": str(e)}
+        raise RuntimeError(f"Failed to communicate with OpenAI Assistant: {e}")
