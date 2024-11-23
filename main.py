@@ -8,7 +8,7 @@ client = OpenAI()
 # 假設您已有一個助手的 ID
 API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("EXISTING_ASSISTANT_ID")
-EXISTING_ASSISTANT_ID = "your_existing_assistant_id"
+
 
 # Step 3. 創建一個對話 Thread
 thread = client.beta.threads.create()
@@ -24,7 +24,7 @@ print(message)
 # Step 5. 執行已存在的助手
 run = client.beta.threads.runs.create(
     thread_id=thread.id,  # 使用創建的 thread_id
-    assistant_id=EXISTING_ASSISTANT_ID  # 使用已存在的助手 ID
+    assistant_id=ASSISTANT_ID  # 使用已存在的助手 ID
 )
 print(run)
 
@@ -44,7 +44,7 @@ for message in thread_messages.data:
 
 # 如果需要更新助手工具
 assistant = client.beta.assistants.update(
-    assistant_id=EXISTING_ASSISTANT_ID,  # 使用已存在的助手 ID
+    assistant_id=ASSISTANT_ID,  # 使用已存在的助手 ID
     tools=[{"type": "retrieval"}, {"type": "code_interpreter"}],  # 添加新的工具
 )
 print(assistant)
