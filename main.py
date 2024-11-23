@@ -1,6 +1,7 @@
 import os
 import json
 from openai import OpenAI
+from dotenv import load_dotenv
 
 # 初始化 OpenAI 客戶端
 API_KEY = os.getenv("OPENAI_API_KEY")
