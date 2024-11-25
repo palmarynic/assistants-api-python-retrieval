@@ -63,6 +63,9 @@ def query_openai_assistant(question):
             run_id=run.id,
         )
 
+        # 打印返回值結構
+        print("DEBUG: run_result =", run_result)
+
         # 提取助手的回答
         assistant_reply = extract_assistant_reply(run_result)
         return {"question": question, "answer": assistant_reply}
@@ -85,7 +88,7 @@ def extract_assistant_reply(run_result):
             elif "data" in run_result and "messages" in run_result["data"]:
                 return run_result["data"]["messages"][-1]["content"]
         # 如果都不符合，拋出異常
-        raise ValueError("Unexpected structure in run_result")
+        raise ValueError(f"Unexpected structure in run_result: {run_result}")
     except (IndexError, KeyError) as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
