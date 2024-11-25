@@ -22,7 +22,7 @@ def home():
 
 @app.route("/ask", methods=["POST"])
 def ask_assistant():
-    """與 OpenAI 助手交互的主要接口"""
+    """與 OpenAI 助手交互，檢索文件內的信息"""
     try:
         # 獲取用戶的問題
         data = request.get_json()
@@ -31,13 +31,15 @@ def ask_assistant():
             return jsonify({"error": "Missing 'question' in request body"}), 400
 
         # 調用助手功能
-        response = ask_openai_assistant(question)
+        response = query_openai_assistant(question)
         return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def ask_openai_assistant(question):
-    """處理與 OpenAI 助手的交互"""
+def query_openai_assistant(question):
+    """
+    與 OpenAI 助手交互，從綁定的文件中檢索答案。
+    """
     try:
         # 創建對話 Thread
         thread = client.beta.threads.create()
@@ -49,7 +51,7 @@ def ask_openai_assistant(question):
             content=question,
         )
 
-        # 執行助手
+        # 執行助手，檢索文件內容
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID,
@@ -61,12 +63,28 @@ def ask_openai_assistant(question):
             run_id=run.id,
         )
 
-        # 返回助手的回答
-        assistant_reply = run_result.get("messages")[-1]["content"]
-
+        # 提取助手的回答
+        assistant_reply = extract_assistant_reply(run_result)
         return {"question": question, "answer": assistant_reply}
     except Exception as e:
-        raise RuntimeError(f"Failed to communicate with OpenAI Assistant: {e}")
+        raise RuntimeError(f"Failed to retrieve data from assistant: {e}")
+
+def extract_assistant_reply(run_result):
+    """
+    提取助手的回答，根據返回數據的結構進行處理。
+    """
+    try:
+        # 檢查返回結果的結構
+        if hasattr(run_result, "messages"):
+            # 如果是對象，提取 messages 屬性
+            return run_result.messages[-1]["content"]
+        elif isinstance(run_result, dict) and "messages" in run_result:
+            # 如果是字典，提取 messages 鍵
+            return run_result["messages"][-1]["content"]
+        else:
+            raise ValueError("Unexpected structure in run_result")
+    except (IndexError, KeyError) as e:
+        raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
 # Vercel 自動識別 `app`
 app = app
