@@ -90,13 +90,23 @@ def extract_assistant_reply(run_result):
     提取助手的回答，根據返回數據的結構進行處理。
     """
     try:
-        # 嘗試從完成的結果中提取 messages
-        if hasattr(run_result, "messages"):
-            return run_result.messages[-1]["content"]
-        elif isinstance(run_result, dict) and "messages" in run_result:
-            return run_result["messages"][-1]["content"]
+        # 嘗試從完成的結果中提取回答
+        if run_result.truncation_strategy and run_result.truncation_strategy.last_messages:
+            # 檢查 `truncation_strategy.last_messages`
+            last_message = run_result.truncation_strategy.last_messages[-1]
+            if "content" in last_message:
+                return last_message["content"]
+
+        # 如果 `tool_resources` 存在回答，提取回答
+        if "tool_resources" in run_result:
+            # 適配 `tool_resources` 的結構
+            tools_data = run_result.tool_resources
+            for tool_key, tool_data in tools_data.items():
+                if "result" in tool_data and "content" in tool_data["result"]:
+                    return tool_data["result"]["content"]
+
         raise ValueError(f"Unexpected structure in completed run_result: {run_result}")
-    except (IndexError, KeyError) as e:
+    except Exception as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
 # Vercel 自動識別 `app`
