@@ -74,15 +74,18 @@ def extract_assistant_reply(run_result):
     提取助手的回答，根據返回數據的結構進行處理。
     """
     try:
-        # 檢查返回結果的結構
+        # 嘗試不同的結構解析方式
         if hasattr(run_result, "messages"):
             # 如果是對象，提取 messages 屬性
             return run_result.messages[-1]["content"]
-        elif isinstance(run_result, dict) and "messages" in run_result:
-            # 如果是字典，提取 messages 鍵
-            return run_result["messages"][-1]["content"]
-        else:
-            raise ValueError("Unexpected structure in run_result")
+        elif isinstance(run_result, dict):
+            # 如果是字典，根據不同的鍵提取
+            if "messages" in run_result:
+                return run_result["messages"][-1]["content"]
+            elif "data" in run_result and "messages" in run_result["data"]:
+                return run_result["data"]["messages"][-1]["content"]
+        # 如果都不符合，拋出異常
+        raise ValueError("Unexpected structure in run_result")
     except (IndexError, KeyError) as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
