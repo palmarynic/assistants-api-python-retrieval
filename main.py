@@ -90,21 +90,21 @@ def extract_assistant_reply(run_result):
     提取助手的回答，根據返回數據的結構進行處理。
     """
     try:
-        # 嘗試從完成的結果中提取回答
+        # 檢查 truncation_strategy.last_messages
         if run_result.truncation_strategy and run_result.truncation_strategy.last_messages:
-            # 檢查 `truncation_strategy.last_messages`
+            print("DEBUG: Using truncation_strategy.last_messages")
             last_message = run_result.truncation_strategy.last_messages[-1]
             if "content" in last_message:
                 return last_message["content"]
 
-        # 如果 `tool_resources` 存在回答，提取回答
-        if "tool_resources" in run_result:
-            # 適配 `tool_resources` 的結構
-            tools_data = run_result.tool_resources
-            for tool_key, tool_data in tools_data.items():
+        # 檢查 tool_resources 是否包含結果
+        if run_result.tool_resources:
+            print("DEBUG: Using tool_resources")
+            for tool_key, tool_data in run_result.tool_resources.items():
                 if "result" in tool_data and "content" in tool_data["result"]:
                     return tool_data["result"]["content"]
 
+        # 最終檢查是否有其他結構包含回答
         raise ValueError(f"Unexpected structure in completed run_result: {run_result}")
     except Exception as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
