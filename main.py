@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import os
+import time
 from openai import OpenAI
 
 # 初始化 Flask 應用
@@ -64,19 +65,33 @@ def check_status():
             return jsonify({"error": "Missing 'thread_id' or 'run_id' in request"}), 400
 
         # 檢索執行結果
-        run_result = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
+        run_result = wait_for_run_completion(thread_id=thread_id, run_id=run_id)
 
-        # 檢查執行狀態
-        if run_result.status == "completed":
-            # 提取回答
-            assistant_reply = extract_assistant_reply(run_result)
-            return jsonify({"status": "completed", "answer": assistant_reply})
-        elif run_result.status in ["failed", "cancelled"]:
-            return jsonify({"status": run_result.status, "error": "Run failed or cancelled."})
-        else:
-            return jsonify({"status": run_result.status})
+        # 提取回答
+        assistant_reply = extract_assistant_reply(run_result)
+        return jsonify({"status": "completed", "answer": assistant_reply})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def wait_for_run_completion(thread_id, run_id, timeout=60, interval=5):
+    """
+    等待助手執行完成，並返回執行結果。
+    - timeout: 最大等待時間（秒）
+    - interval: 查詢間隔（秒）
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        run_result = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
+        print("DEBUG: run_result status =", run_result.status)
+        print("DEBUG: run_result tool_resources =", run_result.tool_resources)
+        print("DEBUG: run_result truncation_strategy =", run_result.truncation_strategy)
+        if run_result.status == "completed":
+            return run_result
+        elif run_result.status in ["failed", "cancelled"]:
+            raise RuntimeError(f"Run failed with status: {run_result.status}")
+        time.sleep(interval)
+
+    raise TimeoutError("Assistant run did not complete within the timeout period.")
 
 def extract_assistant_reply(run_result):
     """
@@ -90,8 +105,17 @@ def extract_assistant_reply(run_result):
                 if "result" in tool_data and "content" in tool_data["result"]:
                     return tool_data["result"]["content"]
 
-        # 如果工具未返回任何結果
-        raise ValueError(f"No content found in tool_resources: {run_result.tool_resources}")
+        # 如果 tool_resources 為空，檢查其他結構
+        print("DEBUG: Tool resources are empty. Checking other fields...")
+
+        # 檢查 truncation_strategy.last_messages
+        if run_result.truncation_strategy and run_result.truncation_strategy.last_messages:
+            last_message = run_result.truncation_strategy.last_messages[-1]
+            if "content" in last_message:
+                return last_message["content"]
+
+        # 如果無法找到回答
+        raise ValueError(f"No content found in tool_resources or other fields: {run_result}")
     except Exception as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
