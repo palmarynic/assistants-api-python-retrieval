@@ -105,11 +105,9 @@ def extract_assistant_reply(run_result):
                 if "result" in tool_data and "content" in tool_data["result"]:
                     return tool_data["result"]["content"]
 
-        # 如果 tool_resources 為空，檢查其他結構
-        print("DEBUG: Tool resources are empty. Checking other fields...")
-
         # 檢查 truncation_strategy.last_messages
         if run_result.truncation_strategy and run_result.truncation_strategy.last_messages:
+            print("DEBUG: Using truncation_strategy.last_messages")
             last_message = run_result.truncation_strategy.last_messages[-1]
             if "content" in last_message:
                 return last_message["content"]
