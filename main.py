@@ -61,13 +61,16 @@ def query_openai_assistant(question):
         # 等待助手完成執行
         run_result = wait_for_run_completion(thread.id, run.id)
 
+        # 打印執行完成的詳細結果
+        print("DEBUG: Completed run_result =", run_result)
+
         # 提取助手的回答
         assistant_reply = extract_assistant_reply(run_result)
         return {"question": question, "answer": assistant_reply}
     except Exception as e:
         raise RuntimeError(f"Failed to retrieve data from assistant: {e}")
 
-def wait_for_run_completion(thread_id, run_id, timeout=60, interval=2):
+def wait_for_run_completion(thread_id, run_id, timeout=60, interval=5):
     """
     等待助手執行完成，並返回執行結果。
     - timeout: 最大等待時間（秒）
@@ -90,22 +93,15 @@ def extract_assistant_reply(run_result):
     提取助手的回答，根據返回數據的結構進行處理。
     """
     try:
-        # 檢查 truncation_strategy.last_messages
-        if run_result.truncation_strategy and run_result.truncation_strategy.last_messages:
-            print("DEBUG: Using truncation_strategy.last_messages")
-            last_message = run_result.truncation_strategy.last_messages[-1]
-            if "content" in last_message:
-                return last_message["content"]
-
         # 檢查 tool_resources 是否包含結果
         if run_result.tool_resources:
-            print("DEBUG: Using tool_resources")
+            print("DEBUG: Using tool_resources =", run_result.tool_resources)
             for tool_key, tool_data in run_result.tool_resources.items():
                 if "result" in tool_data and "content" in tool_data["result"]:
                     return tool_data["result"]["content"]
 
-        # 最終檢查是否有其他結構包含回答
-        raise ValueError(f"Unexpected structure in completed run_result: {run_result}")
+        # 如果工具未返回任何結果
+        raise ValueError(f"No content found in tool_resources: {run_result.tool_resources}")
     except Exception as e:
         raise RuntimeError(f"Error while extracting assistant reply: {e}")
 
