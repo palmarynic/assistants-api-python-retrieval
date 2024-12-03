@@ -76,8 +76,6 @@ def check_status():
 def wait_for_run_completion(thread_id, run_id, timeout=60, interval=5):
     """
     等待助手執行完成，並返回執行結果。
-    - timeout: 最大等待時間（秒）
-    - interval: 查詢間隔（秒）
     """
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -113,7 +111,7 @@ def extract_assistant_reply(run_result):
             if "content" in last_message:
                 return last_message["content"]
 
-        # 嘗試檢查其他可能的字段
+        # 嘗試檢查其他字段
         print("DEBUG: No valid content in known fields. Checking metadata...")
         if "metadata" in run_result and run_result.metadata:
             print("DEBUG: metadata =", run_result.metadata)
