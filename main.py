@@ -85,6 +85,7 @@ def wait_for_run_completion(thread_id, run_id, timeout=60, interval=5):
         print("DEBUG: run_result status =", run_result.status)
         print("DEBUG: run_result tool_resources =", run_result.tool_resources)
         print("DEBUG: run_result truncation_strategy =", run_result.truncation_strategy)
+        print("DEBUG: run_result metadata =", run_result.metadata)
         if run_result.status == "completed":
             return run_result
         elif run_result.status in ["failed", "cancelled"]:
@@ -111,6 +112,12 @@ def extract_assistant_reply(run_result):
             last_message = run_result.truncation_strategy.last_messages[-1]
             if "content" in last_message:
                 return last_message["content"]
+
+        # 嘗試檢查其他可能的字段
+        print("DEBUG: No valid content in known fields. Checking metadata...")
+        if "metadata" in run_result and run_result.metadata:
+            print("DEBUG: metadata =", run_result.metadata)
+            return run_result.metadata.get("summary", "No valid content found in metadata")
 
         # 如果無法找到回答
         raise ValueError(f"No content found in tool_resources or other fields: {run_result}")
